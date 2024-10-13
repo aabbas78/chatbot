@@ -14,15 +14,20 @@ model = None
 # Function to extract text from uploaded PDF file
 def extract_text_from_uploaded_pdf(pdf_file):
     text = ""
-    with open(pdf_file, "rb") as file:
-        reader = PyPDF2.PdfReader(file)
-        for page in range(len(reader.pages)):
-            text += reader.pages[page].extract_text()
+    try:
+        with open(pdf_file, "rb") as file:
+            reader = PyPDF2.PdfReader(file)
+            for page in range(len(reader.pages)):
+                text += reader.pages[page].extract_text()
+        print("PDF extraction complete. Text length:", len(text))
+    except Exception as e:
+        print("Error reading PDF:", str(e))
     return text
 
 # Fine-tune the model based on the uploaded PDF
 def fine_tune_model(pdf_file):
     global model
+    print("Starting model fine-tuning...")
     pdf_text = extract_text_from_uploaded_pdf(pdf_file)
     
     if not pdf_text.strip():  # Check if text extraction was successful
@@ -66,6 +71,7 @@ def fine_tune_model(pdf_file):
     model.save_pretrained("fine_tuned_aircraft_model")
     tokenizer.save_pretrained("fine_tuned_aircraft_model")
 
+    print("Model fine-tuning complete.")
     return "Model fine-tuned successfully!"
 
 # Create a pipeline for text generation (chatbot)
@@ -99,7 +105,7 @@ def main_interface(pdf_file, input_text):
 # Gradio interface inputs and outputs
 interface = gr.Interface(
     fn=main_interface, 
-    inputs=[gr.File(label="Upload PDF"), gr.Textbox(label="Ask a Question")], 
+    inputs=[gr.inputs.File(label="Upload PDF"), gr.inputs.Textbox(label="Ask a Question")], 
     outputs="text", 
     title="Aircraft Maintenance Chatbot"
 )
@@ -107,4 +113,3 @@ interface = gr.Interface(
 # Launch the interface
 if __name__ == "__main__":
     interface.launch()
-
