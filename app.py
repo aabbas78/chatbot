@@ -2,7 +2,6 @@ import gradio as gr
 from transformers import pipeline, GPT2Tokenizer, GPT2LMHeadModel, Trainer, TrainingArguments
 import PyPDF2
 from datasets import Dataset
-import os
 
 # Load the pre-trained model and tokenizer
 model_name = "distilgpt2"  # You can also use "gpt2" or another model
@@ -28,9 +27,12 @@ def extract_text_from_uploaded_pdf(pdf_file):
 def fine_tune_model(pdf_file):
     global model
     print("Starting model fine-tuning...")
+    
+    # Extract text from the PDF
     pdf_text = extract_text_from_uploaded_pdf(pdf_file)
     
     if not pdf_text.strip():  # Check if text extraction was successful
+        print("Error: No text found in the PDF file.")
         return "Error: No text found in the PDF file."
 
     # Prepare dataset for fine-tuning
@@ -48,7 +50,7 @@ def fine_tune_model(pdf_file):
         output_dir="./fine_tuned_aircraft_model",  # Directory to save the model
         overwrite_output_dir=True,
         num_train_epochs=1,  # Adjust based on your dataset size
-        per_device_train_batch_size=2,  # Adjust based on your available memory
+        per_device_train_batch_size=1,  # Use 1 for debugging
         save_steps=10_000,
         save_total_limit=2,
         logging_dir='./logs',
@@ -64,14 +66,18 @@ def fine_tune_model(pdf_file):
         train_dataset=tokenized_dataset,
     )
 
-    # Start training
-    trainer.train()
+    try:
+        # Start training
+        trainer.train()
+        print("Model fine-tuning complete.")
+    except Exception as e:
+        print("Error during training:", str(e))
+        return f"Error during training: {str(e)}"
 
     # Save the fine-tuned model and tokenizer
     model.save_pretrained("fine_tuned_aircraft_model")
     tokenizer.save_pretrained("fine_tuned_aircraft_model")
 
-    print("Model fine-tuning complete.")
     return "Model fine-tuned successfully!"
 
 # Create a pipeline for text generation (chatbot)
@@ -85,13 +91,19 @@ def create_chatbot_pipeline():
 def chatbot(input_text):
     global model
     if model is None:
+        print("Error: Model is not loaded.")
         return "Error: Model is not loaded."
     
     generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
     
-    # Generate the response using the input text
-    response = generator(input_text, max_length=100, num_return_sequences=1)[0]["generated_text"]
-    return response.strip()  # Strip any leading/trailing whitespace
+    try:
+        # Generate the response using the input text
+        response = generator(input_text, max_length=100, num_return_sequences=1)[0]["generated_text"]
+        print("Response generated successfully.")
+        return response.strip()  # Strip any leading/trailing whitespace
+    except Exception as e:
+        print("Error generating response:", str(e))
+        return f"Error generating response: {str(e)}"
 
 # Create a Gradio interface
 def main_interface(pdf_file, input_text):
