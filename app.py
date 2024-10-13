@@ -99,7 +99,7 @@ def main_interface(pdf_file, input_text):
 # Gradio interface inputs and outputs
 interface = gr.Interface(
     fn=main_interface, 
-    inputs=[gr.inputs.File(label="Upload PDF"), gr.inputs.Textbox(label="Ask a Question")], 
+    inputs=[gr.File(label="Upload PDF"), gr.Textbox(label="Ask a Question")], 
     outputs="text", 
     title="Aircraft Maintenance Chatbot"
 )
