@@ -25,6 +25,9 @@ def fine_tune_model(pdf_file):
     global model
     pdf_text = extract_text_from_uploaded_pdf(pdf_file)
     
+    if not pdf_text.strip():  # Check if text extraction was successful
+        return "Error: No text found in the PDF file."
+
     # Prepare dataset for fine-tuning
     data = {"text": [pdf_text]}
     dataset = Dataset.from_dict(data)
@@ -68,31 +71,35 @@ def fine_tune_model(pdf_file):
 # Create a pipeline for text generation (chatbot)
 def create_chatbot_pipeline():
     global model
-    model = GPT2LMHeadModel.from_pretrained("fine_tuned_aircraft_model")
+    if model is None:
+        model = GPT2LMHeadModel.from_pretrained("fine_tuned_aircraft_model")
     return pipeline("text-generation", model=model, tokenizer=tokenizer)
 
 # Chatbot function that answers questions based on the fine-tuned model
 def chatbot(input_text):
     global model
     if model is None:
-        model = GPT2LMHeadModel.from_pretrained("fine_tuned_aircraft_model")
+        return "Error: Model is not loaded."
     
     generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
     
     # Generate the response using the input text
     response = generator(input_text, max_length=100, num_return_sequences=1)[0]["generated_text"]
-    return response
+    return response.strip()  # Strip any leading/trailing whitespace
 
 # Create a Gradio interface
 def main_interface(pdf_file, input_text):
     fine_tune_message = fine_tune_model(pdf_file)  # Fine-tune the model
+    if "Error" in fine_tune_message:
+        return fine_tune_message  # Return error message if any during fine-tuning
+
     create_chatbot_pipeline()  # Create the chatbot pipeline
     return chatbot(input_text)  # Generate a response to the input question
 
 # Gradio interface inputs and outputs
 interface = gr.Interface(
     fn=main_interface, 
-    inputs=[gr.File(label="Upload PDF"), gr.Textbox(label="Ask a Question")], 
+    inputs=[gr.inputs.File(label="Upload PDF"), gr.inputs.Textbox(label="Ask a Question")], 
     outputs="text", 
     title="Aircraft Maintenance Chatbot"
 )
@@ -100,3 +107,4 @@ interface = gr.Interface(
 # Launch the interface
 if __name__ == "__main__":
     interface.launch()
+
